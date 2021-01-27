@@ -1,6 +1,6 @@
 {
   "name": "portfolio-tracker",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Crypto portfolio tracker.",
   "main": "index.js",
   "scripts": {
@@ -14,13 +14,11 @@
     "chalk": "^4.1.0",
     "coinmarketcap-api": "^3.1.1",
     "dotenv": "^8.2.0",
-    "figures": "^3.2.0"
-  },
-  "devDependencies": {
-    "prettier-standard": "^16.4.1",
-    "upgradeps": "^1.4.2"
+    "figures": "^3.2.0",
+    "log-update": "^4.0.0",
+    "rxjs": "^6.6.3"
   },
   "author": "Luciano Ropero <lropero@gmail.com>",
-  "license": "UNLICENSED",
+  "license": "ISC",
   "private": true
 }
