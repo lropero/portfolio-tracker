@@ -1,2 +1,3 @@
-# portfolio-tracker
+# Portfolio tracker
+
 Crypto portfolio tracker.

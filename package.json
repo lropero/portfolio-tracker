@@ -1,0 +1,26 @@
+{
+  "name": "portfolio-tracker",
+  "version": "1.0.0",
+  "description": "Crypto portfolio tracker.",
+  "main": "index.js",
+  "scripts": {
+    "clean": "npx rimraf npm-*.log && npx rimraf package-lock.json && npx -p rimraf rimraf node_modules && npm cache verify",
+    "lint": "npx prettier-standard --lint",
+    "nuke": "npm run clean && npm install",
+    "start": "node index.js",
+    "upgrade": "npx upgradeps -n"
+  },
+  "dependencies": {
+    "chalk": "^4.1.0",
+    "coinmarketcap-api": "^3.1.1",
+    "dotenv": "^8.2.0",
+    "figures": "^3.2.0"
+  },
+  "devDependencies": {
+    "prettier-standard": "^16.4.1",
+    "upgradeps": "^1.4.2"
+  },
+  "author": "Luciano Ropero <lropero@gmail.com>",
+  "license": "UNLICENSED",
+  "private": true
+}
