@@ -23,12 +23,12 @@ const { arrowRight } = require('figures')
 const { delay, mergeMap, repeat, tap } = require('rxjs/operators')
 const { of } = require('rxjs')
 
+const portfolio = require('./portfolio.json')
 const { version } = require('./package.json')
 
 dotenv.config()
 
 const client = new CoinMarketCap(process.env.APIKEY)
-const portfolio = JSON.parse(process.env.PORTFOLIO)
 const symbols = Object.keys(portfolio)
 
 let previousQuotes

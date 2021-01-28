@@ -1,4 +1,4 @@
-# Portfolio tracker
+# Portfolio tracker 📈
 
 Crypto portfolio tracker.
 
@@ -17,12 +17,20 @@ $ npm ci
 ### Configuration
 
 - Create API key at [CoinMarketCap](https://coinmarketcap.com/api/)
-- Edit `.env` file with your key, time delay between polls (in minutes) and your holdings:
+- Edit `.env` file with your key and time delay between polls (in minutes):
 
 ```sh
 APIKEY=<YOUR_API_KEY>
 DELAY=5
-PORTFOLIO={"BTC":0.1234,"ETH":1.2}
+```
+
+- Edit `portfolio.json` file with your holdings:
+
+```sh
+{
+  "BTC": 0.1234,
+  "ETH": 1.2
+}
 ```
 
 ### Usage
