@@ -35,37 +35,33 @@ let previousQuotes
 let previousTotal
 
 const display = quotes => {
-  const values = symbols.reduce((values, symbol) => {
-    values[symbol] = portfolio[symbol] * quotes[symbol]
-    return values
-  }, {})
-  const valuesFormatted = Object.entries(values)
-    .sort((a, b) => b[1] - a[1])
-    .map(entry => entry[0])
-    .reduce((valuesFormatted, symbol) => {
-      valuesFormatted[symbol] = chalk[
-        previousQuotes ? (previousQuotes[symbol] > quotes[symbol] ? 'red' : previousQuotes[symbol] < quotes[symbol] ? 'green' : 'blue') : 'blue'
-      ](
-        new Intl.NumberFormat('en-US', {
-          currency: 'USD',
-          style: 'currency'
-        }).format(values[symbol])
-      )
-      return valuesFormatted
-    }, {})
+  const values = Object.fromEntries(
+    Object.entries(
+      symbols.reduce((values, symbol) => {
+        values[symbol] = portfolio[symbol] * quotes[symbol]
+        return values
+      }, {})
+    ).sort((a, b) => b[1] - a[1])
+  )
   const total = Object.values(values).reduce((total, value) => total + value, 0)
   logUpdate(
-    `${Object.keys(valuesFormatted)
-      .map(symbol => `${chalk.yellow(symbol)} ${arrowRight} ${valuesFormatted[symbol]}`)
-      .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[previousTotal ? (previousTotal > total ? 'red' : previousTotal < total ? 'green' : 'blue') : 'blue'](
-      new Intl.NumberFormat('en-US', {
-        currency: 'USD',
-        style: 'currency'
-      }).format(total)
-    )}`
+    `${Object.keys(values)
+      .map(symbol => `${chalk.yellow(symbol)} ${arrowRight} ${chalk[getColor(values[symbol], previousQuotes?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${formatMoney(quotes[symbol])}`)}`)
+      .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previousTotal)](formatMoney(total))}`
   )
   previousQuotes = quotes
   previousTotal = total
+}
+
+const formatMoney = number => {
+  return new Intl.NumberFormat('en-US', {
+    currency: 'USD',
+    style: 'currency'
+  }).format(number)
+}
+
+const getColor = (current, previous) => {
+  return previous ? (previous > current ? 'red' : previous < current ? 'green' : 'blue') : 'white'
 }
 
 const tracker = of({}).pipe(
@@ -85,5 +81,5 @@ const updateQuotes = async () => {
 }
 
 console.log(chalk.green(`Portfolio tracker v${version}`))
-console.log(chalk.gray(`Like it? Share the love :) ${arrowRight} 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)\n`))
+console.log(chalk.gray(`Like it? Share the love :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)\n`))
 tracker.subscribe()

@@ -1,12 +1,10 @@
 {
   "name": "portfolio-tracker",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Crypto portfolio tracker.",
   "main": "index.js",
   "scripts": {
-    "clean": "npx rimraf npm-*.log && npx rimraf package-lock.json && npx -p rimraf rimraf node_modules && npm cache verify",
     "lint": "npx prettier-standard --lint",
-    "nuke": "npm run clean && npm install",
     "start": "node index.js",
     "upgrade": "npx upgradeps -n"
   },
