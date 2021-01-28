@@ -20,7 +20,7 @@ const CoinMarketCap = require('coinmarketcap-api')
 const dotenv = require('dotenv')
 const logUpdate = require('log-update')
 const { arrowRight } = require('figures')
-const { delay, mergeMap, repeat, tap } = require('rxjs/operators')
+const { delay, repeat, retryWhen, switchMap, tap } = require('rxjs/operators')
 const { of } = require('rxjs')
 
 const portfolio = require('./portfolio.json')
@@ -30,9 +30,8 @@ dotenv.config()
 
 const client = new CoinMarketCap(process.env.APIKEY)
 const symbols = Object.keys(portfolio)
-
-let previousQuotes
 let previousTotal
+let previousValues
 
 const display = quotes => {
   const values = Object.fromEntries(
@@ -46,11 +45,11 @@ const display = quotes => {
   const total = Object.values(values).reduce((total, value) => total + value, 0)
   logUpdate(
     `${Object.keys(values)
-      .map(symbol => `${chalk.yellow(symbol)} ${arrowRight} ${chalk[getColor(values[symbol], previousQuotes?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${formatMoney(quotes[symbol])}`)}`)
+      .map(symbol => `${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previousValues?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${formatMoney(quotes[symbol])}`)}`)
       .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previousTotal)](formatMoney(total))}`
   )
-  previousQuotes = quotes
   previousTotal = total
+  previousValues = values
 }
 
 const formatMoney = number => {
@@ -65,7 +64,8 @@ const getColor = (current, previous) => {
 }
 
 const tracker = of({}).pipe(
-  mergeMap(_ => updateQuotes()),
+  switchMap(() => updateQuotes()),
+  retryWhen(errors => errors.pipe(delay(1000 * 60 * process.env.DELAY))),
   tap(display),
   delay(1000 * 60 * process.env.DELAY),
   repeat()
