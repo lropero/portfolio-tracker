@@ -42,10 +42,11 @@ const display = quotes => {
       }, {})
     ).sort((a, b) => b[1] - a[1])
   )
+  const maxValue = Math.max(...Object.values(values))
   const total = Object.values(values).reduce((total, value) => total + value, 0)
   logUpdate(
     `${Object.keys(values)
-      .map(symbol => `${chalk[getColor(values[symbol], previousValues?.[symbol])](getArrow(values[symbol], previousValues?.[symbol]))} ${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previousValues?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${chalk.inverse(formatMoney(quotes[symbol]))}`)}`)
+      .map(symbol => `${chalk[getColor(values[symbol], previousValues?.[symbol])](getArrow(values[symbol], previousValues?.[symbol]))} ${getBar(maxValue, total, values[symbol])} ${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previousValues?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${chalk.inverse(formatMoney(quotes[symbol]))}`)}`)
       .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previousTotal)](formatMoney(total))}`
   )
   previousTotal = total
@@ -61,6 +62,16 @@ const formatMoney = number => {
 
 const getArrow = (current, previous) => {
   return previous ? (previous > current ? arrowDown : previous < current ? arrowUp : '=') : '-'
+}
+
+const getBar = (maxValue, total, value) => {
+  const bar = []
+  const max = (maxValue * 100) / total
+  let percentage = (value * 100) / total
+  for (let i = 0; i <= max; i++) {
+    bar.push(percentage-- > 0 ? chalk.blue('\u2588') : chalk.gray('\u2591'))
+  }
+  return bar.join('')
 }
 
 const getColor = (current, previous) => {
