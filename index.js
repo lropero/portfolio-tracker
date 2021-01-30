@@ -45,7 +45,7 @@ const display = quotes => {
   const total = Object.values(values).reduce((total, value) => total + value, 0)
   logUpdate(
     `${Object.keys(values)
-      .map(symbol => `${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previousValues?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${formatMoney(quotes[symbol])}`)}`)
+      .map(symbol => `${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previousValues?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${chalk.inverse(formatMoney(quotes[symbol]))}`)}`)
       .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previousTotal)](formatMoney(total))}`
   )
   previousTotal = total
