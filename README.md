@@ -6,7 +6,11 @@ Crypto portfolio tracker.
 
 ### Requires
 
-- Node v14.15.4
+- [Node v14.15.4](https://nodejs.org/)
+
+### Download
+
+- [portfolio-tracker-main.zip](https://github.com/lropero/portfolio-tracker/archive/main.zip) or `git clone https://github.com/lropero/portfolio-tracker.git`
 
 ### Installation
 
