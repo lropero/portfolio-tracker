@@ -2,7 +2,7 @@
 
 Crypto portfolio tracker.
 
-<img height="240" src="tracker.png?raw=true" width="380">
+<img height="312" src="tracker.png?raw=true" width="568">
 
 ### Requires
 
