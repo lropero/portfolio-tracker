@@ -19,7 +19,7 @@ const chalk = require('chalk')
 const CoinMarketCap = require('coinmarketcap-api')
 const dotenv = require('dotenv')
 const logUpdate = require('log-update')
-const { arrowRight } = require('figures')
+const { arrowDown, arrowRight, arrowUp } = require('figures')
 const { delay, repeat, retryWhen, switchMap, tap } = require('rxjs/operators')
 const { of } = require('rxjs')
 
@@ -45,7 +45,7 @@ const display = quotes => {
   const total = Object.values(values).reduce((total, value) => total + value, 0)
   logUpdate(
     `${Object.keys(values)
-      .map(symbol => `${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previousValues?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${chalk.inverse(formatMoney(quotes[symbol]))}`)}`)
+      .map(symbol => `${chalk[getColor(values[symbol], previousValues?.[symbol])](getArrow(values[symbol], previousValues?.[symbol]))} ${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previousValues?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${chalk.inverse(formatMoney(quotes[symbol]))}`)}`)
       .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previousTotal)](formatMoney(total))}`
   )
   previousTotal = total
@@ -57,6 +57,10 @@ const formatMoney = number => {
     currency: 'USD',
     style: 'currency'
   }).format(number)
+}
+
+const getArrow = (current, previous) => {
+  return previous ? (previous > current ? arrowDown : previous < current ? arrowUp : '=') : '-'
 }
 
 const getColor = (current, previous) => {

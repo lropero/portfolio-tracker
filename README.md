@@ -16,8 +16,8 @@ $ npm ci
 
 ### Configuration
 
-- Create API key at [CoinMarketCap](https://coinmarketcap.com/api/)
-- Edit `.env` file with your key and time delay between polls (in minutes):
+- Create API key at [CoinMarketCap](https://coinmarketcap.com/api/) (_required for price retrieval_)
+- Edit `.env` file with your key and time delay between polls (_in minutes_):
 
 ```sh
 APIKEY=<YOUR_API_KEY>
