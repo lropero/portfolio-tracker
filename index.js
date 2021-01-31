@@ -29,6 +29,7 @@ const { version } = require('./package.json')
 dotenv.config()
 
 const client = new CoinMarketCap(process.env.APIKEY)
+const isWindows = process.platform === 'win32'
 const symbols = Object.keys(portfolio)
 let previousTotal
 let previousTotalBTC
@@ -72,7 +73,7 @@ const getBar = (maxValue, total, value) => {
   const max = (maxValue * 100) / total
   let percentage = (value * 100) / total
   for (let i = 0; i <= max; i++) {
-    bar.push(percentage-- > 0 ? chalk.blue('\u2588') : chalk.gray('\u2591'))
+    bar.push(percentage-- > 0 ? chalk[isWindows ? 'magenta' : 'blue']('\u2588') : chalk.gray('\u2591'))
   }
   return bar.join('')
 }
