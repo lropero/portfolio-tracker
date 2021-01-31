@@ -31,6 +31,7 @@ dotenv.config()
 const client = new CoinMarketCap(process.env.APIKEY)
 const symbols = Object.keys(portfolio)
 let previousTotal
+let previousTotalBTC
 let previousValues
 
 const display = quotes => {
@@ -44,12 +45,14 @@ const display = quotes => {
   )
   const maxValue = Math.max(...Object.values(values))
   const total = Object.values(values).reduce((total, value) => total + value, 0)
+  const totalBTC = total / quotes.BTC
   logUpdate(
     `${Object.keys(values)
       .map(symbol => `${chalk[getColor(values[symbol], previousValues?.[symbol])](getArrow(values[symbol], previousValues?.[symbol]))} ${getBar(maxValue, total, values[symbol])} ${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previousValues?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${chalk.inverse(formatMoney(quotes[symbol]))}`)}`)
-      .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previousTotal)](formatMoney(total))}`
+      .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previousTotal)](formatMoney(total))} ${chalk.gray('-')} ${chalk[getColor(totalBTC, previousTotalBTC)](`${totalBTC} BTC`)}`
   )
   previousTotal = total
+  previousTotalBTC = totalBTC
   previousValues = values
 }
 
@@ -87,8 +90,9 @@ const tracker = of({}).pipe(
 )
 
 const updateQuotes = async () => {
-  const { data } = await client.getQuotes({ symbol: symbols })
-  const quotes = symbols.reduce((quotes, symbol) => {
+  const symbolsIncludingBTC = symbols.includes('BTC') ? symbols : ['BTC', ...symbols]
+  const { data } = await client.getQuotes({ symbol: symbolsIncludingBTC })
+  const quotes = symbolsIncludingBTC.reduce((quotes, symbol) => {
     quotes[symbol] = data[symbol].quote.USD.price
     return quotes
   }, {})
