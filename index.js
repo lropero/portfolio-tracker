@@ -31,9 +31,7 @@ dotenv.config()
 const client = new CoinMarketCap(process.env.APIKEY)
 const isWindows = process.platform === 'win32'
 const symbols = Object.keys(portfolio)
-let previousTotal
-let previousTotalBTC
-let previousValues
+let previous = {}
 
 const display = quotes => {
   const values = Object.fromEntries(
@@ -47,14 +45,13 @@ const display = quotes => {
   const maxValue = Math.max(...Object.values(values))
   const total = Object.values(values).reduce((total, value) => total + value, 0)
   const totalBTC = total / quotes.BTC
+  const change = [`${total - previous.total > 0 ? '+' : ''}${(((total - previous.total) * 100) / previous.total).toFixed(1)}%`, `${totalBTC - previous.totalBTC > 0 ? '+' : ''}${(((totalBTC - previous.totalBTC) * 100) / previous.totalBTC).toFixed(1)}%`]
   logUpdate(
     `${Object.keys(values)
-      .map(symbol => `${chalk[getColor(values[symbol], previousValues?.[symbol])](getArrow(values[symbol], previousValues?.[symbol]))} ${getBar(maxValue, total, values[symbol])} ${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previousValues?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${chalk.inverse(formatMoney(quotes[symbol]))}`)}`)
-      .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previousTotal)](formatMoney(total))} ${chalk.gray('-')} ${chalk[getColor(totalBTC, previousTotalBTC)](`${totalBTC} BTC`)}`
+      .map(symbol => `${chalk[getColor(values[symbol], previous.values?.[symbol])](getArrow(values[symbol], previous.values?.[symbol]))} ${getBar(maxValue, total, values[symbol])} ${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previous.values?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${chalk.inverse(formatMoney(quotes[symbol]))}`)}`)
+      .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previous.total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(change[0])}` : ''} ${chalk.gray('-')} ${chalk[getColor(totalBTC, previous.totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(change[1])}` : ''}`
   )
-  previousTotal = total
-  previousTotalBTC = totalBTC
-  previousValues = values
+  previous = { total, totalBTC, values }
 }
 
 const formatMoney = number => {
