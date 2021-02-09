@@ -45,11 +45,10 @@ const display = quotes => {
   const maxValue = Math.max(...Object.values(values))
   const total = Object.values(values).reduce((total, value) => total + value, 0)
   const totalBTC = total / quotes.BTC
-  const change = [`${total - previous.total > 0 ? '+' : ''}${(((total - previous.total) * 100) / previous.total).toFixed(1)}%`, `${totalBTC - previous.totalBTC > 0 ? '+' : ''}${(((totalBTC - previous.totalBTC) * 100) / previous.totalBTC).toFixed(1)}%`]
   logUpdate(
     `${Object.keys(values)
-      .map(symbol => `${chalk[getColor(values[symbol], previous.values?.[symbol])](getArrow(values[symbol], previous.values?.[symbol]))} ${getBar(maxValue, total, values[symbol])} ${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previous.values?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${chalk.inverse(formatMoney(quotes[symbol]))}`)}`)
-      .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previous.total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(change[0])}` : ''} ${chalk.gray('-')} ${chalk[getColor(totalBTC, previous.totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(change[1])}` : ''}`
+      .map(symbol => `${chalk[getColor(values[symbol], previous.values?.[symbol])](getArrow(values[symbol], previous.values?.[symbol]))} ${getBar(maxValue, total, values[symbol])} ${chalk.yellow(symbol)} ${chalk.gray(arrowRight)} ${chalk[getColor(values[symbol], previous.values?.[symbol])](formatMoney(values[symbol]))} ${chalk.gray(`${portfolio[symbol]} x ${chalk.inverse(formatMoney(quotes[symbol]))}`)} ${previous.total ? chalk[getColor(values[symbol], previous.values?.[symbol])](getChange(values[symbol], previous.values?.[symbol])) : ''}`)
+      .join('\n')}\n${chalk.cyan('TOTAL')} ${chalk[getColor(total, previous.total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(getChange(total, previous.total))}` : ''} ${chalk.gray('-')} ${chalk[getColor(totalBTC, previous.totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(getChange(totalBTC, previous.totalBTC))}` : ''}`
   )
   previous = { total, totalBTC, values }
 }
@@ -62,7 +61,7 @@ const formatMoney = number => {
 }
 
 const getArrow = (current, previous) => {
-  return previous ? (previous > current ? arrowDown : previous < current ? arrowUp : '=') : '-'
+  return previous ? (previous > current ? arrowDown : previous < current ? arrowUp : '=') : '\u00B7'
 }
 
 const getBar = (maxValue, total, value) => {
@@ -73,6 +72,10 @@ const getBar = (maxValue, total, value) => {
     bar.push(percentage-- > 0 ? chalk[isWindows ? 'magenta' : 'blue']('\u2588') : chalk.gray('\u2591'))
   }
   return bar.join('')
+}
+
+const getChange = (current, previous) => {
+  return `${current - previous > 0 ? '+' : ''}${(((current - previous) * 100) / previous).toFixed(1)}%`
 }
 
 const getColor = (current, previous) => {
