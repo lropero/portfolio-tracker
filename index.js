@@ -34,7 +34,7 @@ const isWindows = process.platform === 'win32'
 const screen = blessed.screen({ forceUnicode: true, fullUnicode: true, smartCSR: true })
 const symbols = Object.keys(portfolio)
 const maxSymbolLength = Math.max(...symbols.map(symbol => symbol.length))
-let now = Date.now()
+let last
 let previous = {}
 
 const appendDisplay = () => {
@@ -115,17 +115,17 @@ const getDraw = display => quotes => {
   const totalBTC = total / quotes.BTC
   display.setContent(
     `\n\n${Object.keys(values)
-      .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColor(symbol, values[symbol])](formatMoney(values[symbol]).padEnd(formatMoney(maxValue).length))} ${changes ? chalk.cyan(changes[symbol].padEnd(maxChangeLength)) : ''} ${chalk[isWindows ? 'white' : 'gray'](`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
-      .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(getChange(total, previous.total))}` : ''} ${chalk[isWindows ? 'white' : 'gray']('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(getChange(totalBTC, previous.totalBTC))}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk[isWindows ? 'yellow' : 'gray'](`Like it? Buy me a ${isWindows ? 'beer' : '🍺'} :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)`)}`
+      .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColor(symbol, values[symbol])](formatMoney(values[symbol]).padEnd(formatMoney(maxValue).length))} ${changes ? `${chalk.cyan(changes[symbol].padEnd(maxChangeLength))} ` : ''} ${chalk[isWindows ? 'white' : 'gray'](`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
+      .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(getChange(total, previous.total))}` : ''} ${chalk[isWindows ? 'yellow' : 'gray']('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(getChange(totalBTC, previous.totalBTC))}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk[isWindows ? 'yellow' : 'gray'](`Like it? Buy me a ${isWindows ? 'beer' : '🍺'} :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)`)}`
   )
-  now = Date.now()
+  last = Date.now()
   previous = { total, totalBTC, values }
   screen.render()
 }
 
 const start = () => {
   const title = `Portfolio tracker v${version}`
-  const headerContent = screenWidth => ` ${chalk.green(title)}${`${chalk.cyan(`next refresh ${formatDistance(addMinutes(now, process.env.DELAY), Date.now(), { addSuffix: true, includeSeconds: true })}`)}  ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + 4)}`
+  const headerContent = screenWidth => ` ${chalk.green(title)}${`${last ? `${chalk.cyan(`next refresh ${formatDistance(addMinutes(last, process.env.DELAY), Date.now(), { addSuffix: true, includeSeconds: true })}`)}` : ''}  ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + (last ? 4 : -6))}`
   screen.title = title
   const draw = appendDisplay()
   const header = appendHeader()
