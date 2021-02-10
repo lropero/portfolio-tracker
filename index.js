@@ -19,9 +19,10 @@ const blessed = require('blessed')
 const chalk = require('chalk')
 const CoinMarketCap = require('coinmarketcap-api')
 const dotenv = require('dotenv')
+const { addMinutes, formatDistance } = require('date-fns')
 const { arrowDown, arrowUp } = require('figures')
-const { delay, repeat, retryWhen, switchMap, tap } = require('rxjs/operators')
-const { of } = require('rxjs')
+const { debounceTime, delay, repeat, retryWhen, switchMap, tap } = require('rxjs/operators')
+const { fromEvent, of } = require('rxjs')
 
 const portfolio = require('./portfolio.json')
 const { version } = require('./package.json')
@@ -29,9 +30,10 @@ const { version } = require('./package.json')
 dotenv.config()
 
 const client = new CoinMarketCap(process.env.APIKEY)
-const screen = blessed.screen({ smartCSR: true })
+const screen = blessed.screen({ forceUnicode: true, fullUnicode: true, smartCSR: true })
 const symbols = Object.keys(portfolio)
 const maxSymbolLength = Math.max(...symbols.map(symbol => symbol.length))
+let now = Date.now()
 let previous = {}
 
 const appendDisplay = () => {
@@ -44,15 +46,15 @@ const appendDisplay = () => {
   return getDraw(display)
 }
 
-const appendHeader = title => {
-  screen.append(
-    blessed.box({
-      content: ` ${chalk.green(title)}  ${chalk.cyan('Like it? Share the love :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)')}  ${chalk.white('q')}${chalk.cyan('uit')}`,
-      height: 'shrink',
-      style: { bg: 'blue' },
-      width: '100%'
-    })
-  )
+const appendHeader = content => {
+  const header = blessed.box({
+    content,
+    height: 'shrink',
+    style: { bg: 'blue' },
+    width: '100%'
+  })
+  screen.append(header)
+  return header
 }
 
 const formatMoney = number => {
@@ -71,7 +73,7 @@ const getBar = (maxValue, total, value) => {
   const max = (maxValue * 100) / total
   let percentage = (value * 100) / total
   for (let i = 0; i <= max; i++) {
-    bar.push(percentage-- > 0 ? chalk.magenta('\u2588') : chalk.blue('\u2591'))
+    bar.push(percentage-- > 0 ? chalk.magenta('\u2588') : chalk.white('\u2591'))
   }
   return bar.join('')
 }
@@ -114,19 +116,37 @@ const getDraw = display => quotes => {
   display.setContent(
     `\n\n${Object.keys(values)
       .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColor(symbol, values[symbol])](formatMoney(values[symbol]).padEnd(formatMoney(maxValue).length))} ${changes ? chalk.cyan(changes[symbol].padEnd(maxChangeLength)) : ''} ${chalk.white(`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
-      .join('\n')}\n\n${chalk.cyan('TOTAL'.padStart(maxSymbolLength + 10))} ${chalk[getColorTotal(total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(getChange(total, previous.total))}` : ''} ${chalk.white('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(getChange(totalBTC, previous.totalBTC))}` : ''}`
+      .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(getChange(total, previous.total))}` : ''} ${chalk.white('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(getChange(totalBTC, previous.totalBTC))}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk.gray('Like it? Buy me a 🍺 :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)')}`
   )
+  now = Date.now()
   previous = { total, totalBTC, values }
   screen.render()
 }
 
 const start = () => {
   const title = `Portfolio tracker v${version}`
+  const headerContent = screenWidth => ` ${chalk.green(title)}${`${chalk.gray(`next refresh ${formatDistance(addMinutes(now, process.env.DELAY), Date.now(), { addSuffix: true, includeSeconds: true })}`)}  ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + 4)}`
   screen.title = title
   const draw = appendDisplay()
-  appendHeader(title)
+  const header = appendHeader(headerContent(screen.width))
+  fromEvent(screen, 'resize')
+    .pipe(debounceTime(10))
+    .subscribe(() => {
+      header.setContent(headerContent(screen.width))
+      screen.render()
+    })
   screen.key('q', () => process.exit())
   screen.render()
+  of({})
+    .pipe(
+      delay(5000),
+      tap(() => {
+        header.setContent(headerContent(screen.width))
+        screen.render()
+      }),
+      repeat()
+    )
+    .subscribe()
   of({})
     .pipe(
       switchMap(() => updateQuotes()),
