@@ -47,7 +47,7 @@ const appendDisplay = () => {
 const appendHeader = title => {
   screen.append(
     blessed.box({
-      content: ` ${chalk.green(title)}  ${chalk.gray('Like it? Share the love :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)')}  ${chalk.white('q')}${chalk.gray('uit')}`,
+      content: ` ${chalk.green(title)}  ${chalk.cyan('Like it? Share the love :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)')}  ${chalk.cyan('q')}${chalk.white('uit')}`,
       height: 'shrink',
       style: { bg: 'blue' },
       width: '100%'
