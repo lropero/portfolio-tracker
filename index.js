@@ -30,6 +30,7 @@ const { version } = require('./package.json')
 dotenv.config()
 
 const client = new CoinMarketCap(process.env.APIKEY)
+const isWindows = process.platform === 'win32'
 const screen = blessed.screen({ forceUnicode: true, fullUnicode: true, smartCSR: true })
 const symbols = Object.keys(portfolio)
 const maxSymbolLength = Math.max(...symbols.map(symbol => symbol.length))
@@ -46,9 +47,8 @@ const appendDisplay = () => {
   return getDraw(display)
 }
 
-const appendHeader = content => {
+const appendHeader = () => {
   const header = blessed.box({
-    content,
     height: 'shrink',
     style: { bg: 'blue' },
     width: '100%'
@@ -65,7 +65,7 @@ const formatMoney = number => {
 }
 
 const getArrow = (symbol, value) => {
-  return Object.keys(previous).length ? (previous.values[symbol] > value ? chalk.red(arrowDown) : previous.values[symbol] < value ? chalk.green(arrowUp) : chalk.blue('=')) : chalk.white('\u00B7')
+  return Object.keys(previous).length ? (previous.values[symbol] > value ? chalk.red(arrowDown) : previous.values[symbol] < value ? chalk.green(arrowUp) : chalk.blue('=')) : chalk[isWindows ? 'white' : 'gray']('\u00B7')
 }
 
 const getBar = (maxValue, total, value) => {
@@ -73,7 +73,7 @@ const getBar = (maxValue, total, value) => {
   const max = (maxValue * 100) / total
   let percentage = (value * 100) / total
   for (let i = 0; i <= max; i++) {
-    bar.push(percentage-- > 0 ? chalk.magenta('\u2588') : chalk.white('\u2591'))
+    bar.push(percentage-- > 0 ? chalk.magenta('\u2588') : chalk[isWindows ? 'blue' : 'gray']('\u2591'))
   }
   return bar.join('')
 }
@@ -115,8 +115,8 @@ const getDraw = display => quotes => {
   const totalBTC = total / quotes.BTC
   display.setContent(
     `\n\n${Object.keys(values)
-      .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColor(symbol, values[symbol])](formatMoney(values[symbol]).padEnd(formatMoney(maxValue).length))} ${changes ? chalk.cyan(changes[symbol].padEnd(maxChangeLength)) : ''} ${chalk.white(`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
-      .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(getChange(total, previous.total))}` : ''} ${chalk.white('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(getChange(totalBTC, previous.totalBTC))}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk.gray('Like it? Buy me a 🍺 :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)')}`
+      .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColor(symbol, values[symbol])](formatMoney(values[symbol]).padEnd(formatMoney(maxValue).length))} ${changes ? chalk.cyan(changes[symbol].padEnd(maxChangeLength)) : ''} ${chalk[isWindows ? 'white' : 'gray'](`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
+      .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(getChange(total, previous.total))}` : ''} ${chalk[isWindows ? 'white' : 'gray']('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(getChange(totalBTC, previous.totalBTC))}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk[isWindows ? 'yellow' : 'gray'](`Like it? Buy me a ${isWindows ? 'beer' : '🍺'} :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)`)}`
   )
   now = Date.now()
   previous = { total, totalBTC, values }
@@ -125,10 +125,10 @@ const getDraw = display => quotes => {
 
 const start = () => {
   const title = `Portfolio tracker v${version}`
-  const headerContent = screenWidth => ` ${chalk.green(title)}${`${chalk.gray(`next refresh ${formatDistance(addMinutes(now, process.env.DELAY), Date.now(), { addSuffix: true, includeSeconds: true })}`)}  ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + 4)}`
+  const headerContent = screenWidth => ` ${chalk.green(title)}${`${chalk.cyan(`next refresh ${formatDistance(addMinutes(now, process.env.DELAY), Date.now(), { addSuffix: true, includeSeconds: true })}`)}  ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + 4)}`
   screen.title = title
   const draw = appendDisplay()
-  const header = appendHeader(headerContent(screen.width))
+  const header = appendHeader()
   fromEvent(screen, 'resize')
     .pipe(debounceTime(10))
     .subscribe(() => {
@@ -152,6 +152,10 @@ const start = () => {
       switchMap(() => updateQuotes()),
       retryWhen(errors => errors.pipe(delay(1000 * 60 * process.env.DELAY))),
       tap(draw),
+      tap(() => {
+        header.setContent(headerContent(screen.width))
+        screen.render()
+      }),
       delay(1000 * 60 * process.env.DELAY),
       repeat()
     )
