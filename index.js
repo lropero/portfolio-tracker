@@ -63,7 +63,7 @@ const formatMoney = number => {
 }
 
 const getArrow = (symbol, value) => {
-  return Object.keys(previous).length ? (previous.values[symbol] > value ? chalk.red(arrowDown) : previous.values[symbol] < value ? chalk.green(arrowUp) : chalk.blue('=')) : chalk.blue('\u00B7')
+  return Object.keys(previous).length ? (previous.values[symbol] > value ? chalk.red(arrowDown) : previous.values[symbol] < value ? chalk.green(arrowUp) : chalk.blue('=')) : chalk.white('\u00B7')
 }
 
 const getBar = (maxValue, total, value) => {
@@ -113,8 +113,8 @@ const getDraw = display => quotes => {
   const totalBTC = total / quotes.BTC
   display.setContent(
     `\n\n${Object.keys(values)
-      .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColor(symbol, values[symbol])](formatMoney(values[symbol]).padEnd(formatMoney(maxValue).length))} ${changes ? chalk.cyan(changes[symbol].padEnd(maxChangeLength)) : ''} ${chalk.blue(`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
-      .join('\n')}\n\n${chalk.cyan('TOTAL'.padStart(maxSymbolLength + 10))} ${chalk[getColorTotal(total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(getChange(total, previous.total))}` : ''} ${chalk.blue('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(getChange(totalBTC, previous.totalBTC))}` : ''}`
+      .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColor(symbol, values[symbol])](formatMoney(values[symbol]).padEnd(formatMoney(maxValue).length))} ${changes ? chalk.cyan(changes[symbol].padEnd(maxChangeLength)) : ''} ${chalk.white(`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
+      .join('\n')}\n\n${chalk.cyan('TOTAL'.padStart(maxSymbolLength + 10))} ${chalk[getColorTotal(total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(getChange(total, previous.total))}` : ''} ${chalk.white('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(getChange(totalBTC, previous.totalBTC))}` : ''}`
   )
   previous = { total, totalBTC, values }
   screen.render()
