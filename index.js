@@ -125,10 +125,10 @@ const getDraw = display => quotes => {
 
 const start = () => {
   const title = `Portfolio tracker v${version}`
-  const headerContent = screenWidth => ` ${chalk.green(title)}${`${last ? `${chalk.cyan(`next refresh ${formatDistance(addMinutes(last, process.env.DELAY), Date.now(), { addSuffix: true, includeSeconds: true })}`)}` : ''}  ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + (last ? 4 : -6))}`
   screen.title = title
   const draw = appendDisplay()
   const header = appendHeader()
+  const headerContent = screenWidth => ` ${chalk.green(title)}${`${last ? `${chalk.cyan(`next refresh ${formatDistance(addMinutes(last, process.env.DELAY), Date.now(), { addSuffix: true, includeSeconds: true })}`)}` : ''}  ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + (last ? 4 : -6))}`
   fromEvent(screen, 'resize')
     .pipe(debounceTime(10))
     .subscribe(() => {
