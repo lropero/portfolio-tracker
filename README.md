@@ -2,11 +2,11 @@
 
 Crypto portfolio tracker.
 
-<img height="312" src="tracker.png?raw=true" width="568">
+<img height="380" src="tracker.png?raw=true" width="800">
 
 ### Requires
 
-- [Node v14.15.4](https://nodejs.org/)
+- [Node v14.15.5](https://nodejs.org/)
 
 ### Download
 
