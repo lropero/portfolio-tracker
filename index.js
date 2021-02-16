@@ -19,42 +19,55 @@ const blessed = require('blessed')
 const chalk = require('chalk')
 const CoinMarketCap = require('coinmarketcap-api')
 const dotenv = require('dotenv')
+const jsonfile = require('jsonfile')
 const { addMinutes, formatDistance } = require('date-fns')
 const { arrowDown, arrowUp } = require('figures')
 const { debounceTime, delay, repeat, retryWhen, switchMap, tap } = require('rxjs/operators')
 const { fromEvent, of } = require('rxjs')
 
-const portfolio = require('./portfolio.json')
-const { version } = require('./package.json')
-
 dotenv.config()
 
-const client = new CoinMarketCap(process.env.APIKEY)
-const isWindows = process.platform === 'win32'
-const screen = blessed.screen({ forceUnicode: true, fullUnicode: true, smartCSR: true })
-const symbols = Object.keys(portfolio)
-const maxSymbolLength = Math.max(...symbols.map(symbol => symbol.length))
-let last
-let previous = {}
+const store = {
+  client: new CoinMarketCap(process.env.APIKEY),
+  content: { display: { quotes: '', settings: '' }, header: '' },
+  currentMode: 'quotes',
+  isWindows: process.platform === 'win32',
+  last: {},
+  screen: blessed.screen({ forceUnicode: true, fullUnicode: true, smartCSR: true })
+}
 
 const appendDisplay = () => {
+  const { screen } = store
   const display = blessed.box({
     height: '100%',
     style: { bg: 'black' },
     width: '100%'
   })
   screen.append(display)
-  return getDraw(display)
+  store.display = display
 }
 
 const appendHeader = () => {
+  const { screen } = store
   const header = blessed.box({
     height: 'shrink',
     style: { bg: 'blue' },
     width: '100%'
   })
   screen.append(header)
-  return header
+  store.header = header
+}
+
+const calculateChange = (current, previous) => {
+  const change = Math.round(((current - previous) * 1000) / previous) / 10
+  return [change, `${change > 0 ? '+' : change === 0 ? ' ' : ''}${change.toFixed(1)}%`]
+}
+
+const draw = () => {
+  const { content, currentMode, display, header, screen } = store
+  display.setContent(content.display[currentMode])
+  header.setContent(content.header)
+  screen.render()
 }
 
 const formatMoney = number => {
@@ -65,10 +78,12 @@ const formatMoney = number => {
 }
 
 const getArrow = (symbol, value) => {
-  return Object.keys(previous).length ? (previous.values[symbol] > value ? chalk.red(arrowDown) : previous.values[symbol] < value ? chalk.green(arrowUp) : chalk.blue('=')) : chalk[isWindows ? 'white' : 'gray']('\u00B7')
+  const { isWindows, last } = store
+  return last.values ? (last.values[symbol] > value ? chalk.red(arrowDown) : last.values[symbol] < value ? chalk.green(arrowUp) : chalk.blue('=')) : chalk[isWindows ? 'white' : 'gray']('\u00B7')
 }
 
 const getBar = (maxValue, total, value) => {
+  const { isWindows } = store
   const bar = []
   const max = (maxValue * 100) / total
   let percentage = (value * 100) / total
@@ -78,98 +93,154 @@ const getBar = (maxValue, total, value) => {
   return bar.join('')
 }
 
-const getChange = (current, previous) => {
-  return `${current - previous > 0 ? '+' : ''}${(((current - previous) * 100) / previous).toFixed(1)}%`
+const getChange = (change, maxChangeLength, maxToMin) => {
+  const { isWindows } = store
+  return change ? `${chalk[getColorChange(change[0], maxToMin)](change[1].padEnd(maxChangeLength))} ` : chalk[isWindows ? 'white' : 'gray']('\u00B7')
 }
 
-const getColor = (symbol, value) => {
-  return Object.keys(previous).length ? (previous.values[symbol] > value ? 'red' : previous.values[symbol] < value ? 'green' : 'blue') : 'white'
+const getColorChange = (change, maxToMin) => {
+  const { isWindows } = store
+  if (change > 0) {
+    switch (maxToMin.filter(change => change > 0).indexOf(change)) {
+      case 0:
+        return 'green'
+      case 1:
+        return 'yellow'
+      case 2:
+        return 'cyan'
+    }
+  }
+  if (change < 0) {
+    switch (
+      maxToMin
+        .filter(change => change < 0)
+        .reverse()
+        .indexOf(change)
+    ) {
+      case 0:
+        return 'red'
+      case 1:
+        return 'magenta'
+      case 2:
+        return 'blue'
+    }
+  }
+  return isWindows ? 'white' : 'gray'
+}
+
+const getColorMoney = (symbol, value) => {
+  const { last } = store
+  return last.values ? (last.values[symbol] > value ? 'red' : last.values[symbol] < value ? 'green' : 'blue') : 'white'
 }
 
 const getColorTotal = total => {
-  return Object.keys(previous).length ? (previous.total > total ? 'red' : previous.total < total ? 'green' : 'blue') : 'white'
+  const { last } = store
+  return last.total ? (last.total > total ? 'red' : last.total < total ? 'green' : 'blue') : 'white'
 }
 
 const getColorTotalBTC = totalBTC => {
-  return Object.keys(previous).length ? (previous.totalBTC > totalBTC ? 'red' : previous.totalBTC < totalBTC ? 'green' : 'blue') : 'white'
+  const { last } = store
+  return last.totalBTC ? (last.totalBTC > totalBTC ? 'red' : last.totalBTC < totalBTC ? 'green' : 'blue') : 'white'
 }
 
-const getDraw = display => quotes => {
-  const values = Object.fromEntries(
-    Object.entries(
-      symbols.reduce((values, symbol) => {
-        values[symbol] = portfolio[symbol] * quotes[symbol]
-        return values
-      }, {})
-    ).sort((a, b) => b[1] - a[1])
-  )
-  const changes =
-    !!Object.keys(previous).length &&
-    symbols.reduce((changes, symbol) => {
-      changes[symbol] = getChange(values[symbol], previous.values[symbol])
-      return changes
-    }, {})
-  const maxChangeLength = changes && Math.max(...Object.values(changes).map(change => change.length))
-  const maxValue = Math.max(...Object.values(values))
-  const total = Object.values(values).reduce((total, value) => total + value, 0)
-  const totalBTC = total / quotes.BTC
-  display.setContent(
-    `\n\n${Object.keys(values)
-      .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColor(symbol, values[symbol])](formatMoney(values[symbol]).padEnd(formatMoney(maxValue).length))} ${changes ? `${chalk.cyan(changes[symbol].padEnd(maxChangeLength))} ` : ''} ${chalk[isWindows ? 'white' : 'gray'](`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
-      .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))}${previous.total ? ` ${chalk.cyan(getChange(total, previous.total))}` : ''} ${chalk[isWindows ? 'yellow' : 'gray']('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${previous.totalBTC ? ` ${chalk.cyan(getChange(totalBTC, previous.totalBTC))}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk[isWindows ? 'yellow' : 'gray'](`Like it? Buy me a ${isWindows ? 'beer' : '🍺'} :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC)`)}`
-  )
-  last = Date.now()
-  previous = { total, totalBTC, values }
-  screen.render()
+const getQuotes = async symbols => {
+  const { client } = store
+  const symbolsIncludingBTC = symbols.includes('BTC') ? symbols : ['BTC', ...symbols]
+  const { data } = await client.getQuotes({ symbol: symbolsIncludingBTC })
+  return symbolsIncludingBTC.reduce((quotes, symbol) => {
+    quotes[symbol] = data[symbol].quote.USD.price
+    return quotes
+  }, {})
 }
 
-const start = () => {
+const start = async () => {
+  const { isWindows, screen } = store
+  const { version } = await jsonfile.readFile('./package.json')
+  const portfolio = await jsonfile.readFile('./portfolio.json')
+  const symbols = Object.keys(portfolio)
+  const maxSymbolLength = Math.max(...symbols.map(symbol => symbol.length))
   const title = `Portfolio tracker v${version}`
-  screen.title = title
-  const draw = appendDisplay()
-  const header = appendHeader()
-  const headerContent = screenWidth => ` ${chalk.green(title)}${`${last ? `${chalk.cyan(`next refresh ${formatDistance(addMinutes(last, process.env.DELAY), Date.now(), { addSuffix: true, includeSeconds: true })}`)}` : ''}  ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + (last ? 4 : -6))}`
-  fromEvent(screen, 'resize')
-    .pipe(debounceTime(10))
-    .subscribe(() => {
-      header.setContent(headerContent(screen.width))
-      screen.render()
-    })
+  const headerContent = screenWidth => ` ${chalk.green(title)}${`${store.currentMode === 'quotes' && store.last.time ? `${chalk.cyan(`next refresh ${formatDistance(addMinutes(store.last.time, process.env.DELAY), Date.now(), { addSuffix: true, includeSeconds: true })}`)}` : ''}  ${chalk.white('s')}${chalk.cyan(store.currentMode === 'quotes' ? 'ettings' : 'ave')} ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + (store.currentMode === 'quotes' && store.last.time ? 24 : 14))}`
+  appendDisplay()
+  appendHeader()
   screen.key('q', () => process.exit())
-  screen.render()
+  screen.key('s', () => {
+    store.currentMode = store.currentMode === 'quotes' ? 'settings' : 'quotes'
+    store.content.header = headerContent(screen.width)
+    draw()
+  })
+  screen.title = title
+  store.content.header = headerContent(screen.width)
+  store.content.display.settings = `\n\n${symbols.map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${chalk[isWindows ? 'white' : 'gray'](portfolio[symbol])}`).join('\n')}`
+  draw()
+  fromEvent(screen, 'resize')
+    .pipe(debounceTime(50))
+    .subscribe(() => {
+      if (store.currentMode === 'quotes') {
+        store.content.header = headerContent(screen.width)
+        draw()
+      }
+    })
   of({})
     .pipe(
-      delay(5000),
-      tap(() => {
-        header.setContent(headerContent(screen.width))
-        screen.render()
-      }),
-      repeat()
-    )
-    .subscribe()
-  of({})
-    .pipe(
-      switchMap(() => updateQuotes()),
-      retryWhen(errors => errors.pipe(delay(1000 * 60 * process.env.DELAY))),
-      tap(draw),
-      tap(() => {
-        header.setContent(headerContent(screen.width))
-        screen.render()
+      switchMap(() => getQuotes(symbols)),
+      retryWhen(errors =>
+        errors.pipe(
+          tap(() => {
+            store.last = { time: Date.now() }
+          }),
+          delay(1000 * 60 * process.env.DELAY)
+        )
+      ),
+      tap(quotes => {
+        const values = Object.fromEntries(
+          Object.entries(
+            symbols.reduce((values, symbol) => {
+              values[symbol] = portfolio[symbol] * quotes[symbol]
+              return values
+            }, {})
+          ).sort((a, b) => b[1] - a[1])
+        )
+        const changes =
+          !!store.last.values &&
+          symbols.reduce((changes, symbol) => {
+            changes[symbol] = calculateChange(values[symbol], store.last.values[symbol])
+            return changes
+          }, {})
+        const maxChangeLength = changes && Math.max(...Object.values(changes).map(change => change[1].length))
+        const maxToMin = [
+          ...new Set(
+            Object.values(changes)
+              .map(change => change[0])
+              .sort((a, b) => b - a)
+          )
+        ]
+        const maxValue = Math.max(...Object.values(values))
+        const total = Object.values(values).reduce((total, value) => total + value, 0)
+        const totalBTC = Math.round((total * 100000000) / quotes.BTC) / 100000000
+        store.content.display.quotes = `\n\n${Object.keys(values)
+          .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColorMoney(symbol, values[symbol])](formatMoney(values[symbol]).padStart(formatMoney(maxValue).length))} ${getChange(changes[symbol], maxChangeLength, maxToMin)} ${chalk[isWindows ? 'white' : 'gray'](`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
+          .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))}${store.last.total ? ` ${chalk.cyan(calculateChange(total, store.last.total)[1])}` : ''} ${chalk[isWindows ? 'yellow' : 'gray']('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${store.last.totalBTC ? ` ${chalk.cyan(calculateChange(totalBTC, store.last.totalBTC)[1])}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk[isWindows ? 'yellow' : 'gray'](`Like it? Buy me a ${isWindows ? 'beer' : '🍺'} :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC) `)}`
+        store.last = { time: Date.now(), total, totalBTC, values }
+        store.content.header = headerContent(screen.width)
+        draw()
       }),
       delay(1000 * 60 * process.env.DELAY),
       repeat()
     )
     .subscribe()
-}
-
-const updateQuotes = async () => {
-  const symbolsIncludingBTC = symbols.includes('BTC') ? symbols : ['BTC', ...symbols]
-  const { data } = await client.getQuotes({ symbol: symbolsIncludingBTC })
-  const quotes = symbolsIncludingBTC.reduce((quotes, symbol) => {
-    quotes[symbol] = data[symbol].quote.USD.price
-    return quotes
-  }, {})
-  return quotes
+  of({})
+    .pipe(
+      delay(5000),
+      tap(() => {
+        if (store.currentMode === 'quotes') {
+          store.content.header = headerContent(screen.width)
+          draw()
+        }
+      }),
+      repeat()
+    )
+    .subscribe()
 }
 
 start()

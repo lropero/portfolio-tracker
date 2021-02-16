@@ -1,6 +1,6 @@
 {
   "name": "portfolio-tracker",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Crypto portfolio tracker.",
   "main": "index.js",
   "scripts": {
@@ -15,6 +15,7 @@
     "date-fns": "^2.17.0",
     "dotenv": "^8.2.0",
     "figures": "^3.2.0",
+    "jsonfile": "^6.1.0",
     "rxjs": "^6.6.3"
   },
   "author": "Luciano Ropero <lropero@gmail.com>",
