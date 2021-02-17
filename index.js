@@ -99,15 +99,14 @@ const getChange = (change, maxChangeLength, maxToMin) => {
 }
 
 const getColorChange = (change, maxToMin) => {
-  const { isWindows } = store
   if (change > 0) {
     switch (maxToMin.filter(change => change > 0).indexOf(change)) {
       case 0:
-        return 'green'
+        return 'bgGreen'
       case 1:
-        return 'yellow'
+        return 'bgYellow'
       case 2:
-        return 'cyan'
+        return 'bgCyan'
     }
   }
   if (change < 0) {
@@ -118,14 +117,14 @@ const getColorChange = (change, maxToMin) => {
         .indexOf(change)
     ) {
       case 0:
-        return 'red'
+        return 'bgRed'
       case 1:
-        return 'magenta'
+        return 'bgMagenta'
       case 2:
-        return 'blue'
+        return 'bgBlue'
     }
   }
-  return isWindows ? 'white' : 'gray'
+  return 'cyan'
 }
 
 const getColorMoney = (symbol, value) => {
@@ -220,7 +219,7 @@ const start = async () => {
         const totalBTC = Math.round((total * 100000000) / quotes.BTC) / 100000000
         store.content.display.quotes = `\n\n${Object.keys(values)
           .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColorMoney(symbol, values[symbol])](formatMoney(values[symbol]).padStart(formatMoney(maxValue).length))} ${getChange(changes[symbol], maxChangeLength, maxToMin)} ${chalk[isWindows ? 'white' : 'gray'](`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
-          .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))}${store.last.total ? ` ${chalk.cyan(calculateChange(total, store.last.total)[1])}` : ''} ${chalk[isWindows ? 'yellow' : 'gray']('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${store.last.totalBTC ? ` ${chalk.cyan(calculateChange(totalBTC, store.last.totalBTC)[1])}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk[isWindows ? 'yellow' : 'gray'](`Like it? Buy me a ${isWindows ? 'beer' : '🍺'} :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC) `)}`
+          .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))}${store.last.total ? ` ${chalk.cyan(calculateChange(total, store.last.total)[1].trim())}` : ''} ${chalk[isWindows ? 'yellow' : 'gray']('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${store.last.totalBTC ? ` ${chalk.cyan(calculateChange(totalBTC, store.last.totalBTC)[1].trim())}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk[isWindows ? 'yellow' : 'gray'](`Like it? Buy me a ${isWindows ? 'beer' : '🍺'} :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC) `)}`
         store.last = { time: Date.now(), total, totalBTC, values }
         store.content.header = headerContent(screen.width)
         draw()
