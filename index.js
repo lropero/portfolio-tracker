@@ -18,8 +18,10 @@
 const blessed = require('blessed')
 const chalk = require('chalk')
 const CoinMarketCap = require('coinmarketcap-api')
+const contrib = require('blessed-contrib')
 const dotenv = require('dotenv')
 const jsonfile = require('jsonfile')
+const stripAnsi = require('strip-ansi')
 const { addMinutes, formatDistance } = require('date-fns')
 const { arrowDown, arrowUp } = require('figures')
 const { debounceTime, delay, repeat, retryWhen, switchMap, tap } = require('rxjs/operators')
@@ -29,10 +31,10 @@ dotenv.config()
 
 const store = {
   client: new CoinMarketCap(process.env.APIKEY),
-  content: { display: { quotes: '', settings: '' }, header: '' },
-  currentMode: 'quotes',
+  content: { display: { main: '', settings: '' }, header: '' },
+  currentMode: 'main',
   isWindows: process.platform === 'win32',
-  last: {},
+  previous: [],
   screen: blessed.screen({ forceUnicode: true, fullUnicode: true, smartCSR: true })
 }
 
@@ -58,15 +60,43 @@ const appendHeader = () => {
   store.header = header
 }
 
-const calculateChange = (current, previous) => {
-  const change = Math.round(((current - previous) * 1000) / previous) / 10
+const appendLine = maxSymbolLength => {
+  const { content, screen } = store
+  const lines = content.display.main.split('\n')
+  const line = contrib.line({
+    height: 13,
+    style: {
+      baseline: 'cyan',
+      bg: 'black',
+      text: 'black'
+    },
+    top: lines.length + 1,
+    wholeNumbersOnly: true,
+    width: Math.max(...lines.map(line => stripAnsi(line).length)) + maxSymbolLength * 2
+  })
+  if (store.line) {
+    screen.remove(store.line)
+  }
+  screen.append(line)
+  store.line = line
+}
+
+const calculateChange = (current, last) => {
+  const change = Math.round(((current - last) * 1000) / last) / 10
   return [change, `${change > 0 ? '+' : change === 0 ? ' ' : ''}${change.toFixed(1)}%`]
 }
 
 const draw = () => {
-  const { content, currentMode, display, header, screen } = store
+  const { content, currentMode, display, header, line, lineData, screen } = store
   display.setContent(content.display[currentMode])
   header.setContent(content.header)
+  if (currentMode === 'main' && line && lineData) {
+    const { x, yTotal, yTotalBTC } = lineData
+    line.setData([
+      { style: { line: 'green' }, title: 'USD', x, y: yTotal },
+      { style: { line: 'yellow' }, title: 'BTC', x, y: yTotalBTC }
+    ])
+  }
   screen.render()
 }
 
@@ -78,8 +108,9 @@ const formatMoney = number => {
 }
 
 const getArrow = (symbol, value) => {
-  const { isWindows, last } = store
-  return last.values ? (last.values[symbol] > value ? chalk.red(arrowDown) : last.values[symbol] < value ? chalk.green(arrowUp) : chalk.blue('=')) : chalk[isWindows ? 'white' : 'gray']('\u00B7')
+  const { isWindows, previous } = store
+  const last = previous[previous.length - 1]
+  return last ? (last.values[symbol] > value ? chalk.red(arrowDown) : last.values[symbol] < value ? chalk.green(arrowUp) : chalk.blue('=')) : chalk[isWindows ? 'white' : 'gray']('\u00B7')
 }
 
 const getBar = (maxValue, total, value) => {
@@ -128,18 +159,21 @@ const getColorChange = (change, maxToMin) => {
 }
 
 const getColorMoney = (symbol, value) => {
-  const { last } = store
-  return last.values ? (last.values[symbol] > value ? 'red' : last.values[symbol] < value ? 'green' : 'blue') : 'white'
+  const { previous } = store
+  const last = previous[previous.length - 1]
+  return last ? (last.values[symbol] > value ? 'red' : last.values[symbol] < value ? 'green' : 'blue') : 'white'
 }
 
 const getColorTotal = total => {
-  const { last } = store
-  return last.total ? (last.total > total ? 'red' : last.total < total ? 'green' : 'blue') : 'white'
+  const { previous } = store
+  const last = previous[previous.length - 1]
+  return last ? (last.total > total ? 'red' : last.total < total ? 'green' : 'blue') : 'white'
 }
 
 const getColorTotalBTC = totalBTC => {
-  const { last } = store
-  return last.totalBTC ? (last.totalBTC > totalBTC ? 'red' : last.totalBTC < totalBTC ? 'green' : 'blue') : 'white'
+  const { previous } = store
+  const last = previous[previous.length - 1]
+  return last ? (last.totalBTC > totalBTC ? 'red' : last.totalBTC < totalBTC ? 'green' : 'blue') : 'white'
 }
 
 const getQuotes = async symbols => {
@@ -159,12 +193,18 @@ const start = async () => {
   const symbols = Object.keys(portfolio)
   const maxSymbolLength = Math.max(...symbols.map(symbol => symbol.length))
   const title = `Portfolio tracker v${version}`
-  const headerContent = screenWidth => ` ${chalk.green(title)}${`${store.currentMode === 'quotes' && store.last.time ? `${chalk.cyan(`next refresh ${formatDistance(addMinutes(store.last.time, process.env.DELAY), Date.now(), { addSuffix: true, includeSeconds: true })}`)}` : ''}  ${chalk.white('s')}${chalk.cyan(store.currentMode === 'quotes' ? 'ettings' : 'ave')} ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + (store.currentMode === 'quotes' && store.last.time ? 24 : 14))}`
+  const headerContent = screenWidth => {
+    const { currentMode, previous } = store
+    const last = previous[previous.length - 1]
+    const future = last && addMinutes(last.time, process.env.DELAY)
+    const now = Date.now()
+    return ` ${chalk.green(title)}${`${currentMode === 'main' && last && future.getTime() > now ? `${chalk.cyan(`next refresh ${formatDistance(future, now, { addSuffix: true, includeSeconds: true })}`)}` : ''}  ${chalk.white('s')}${chalk.cyan(currentMode === 'main' ? 'ettings' : 'ave')} ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + (currentMode === 'main' && last ? 24 : 14))}`
+  }
   appendDisplay()
   appendHeader()
   screen.key('q', () => process.exit())
   screen.key('s', () => {
-    store.currentMode = store.currentMode === 'quotes' ? 'settings' : 'quotes'
+    store.currentMode = store.currentMode === 'main' ? 'settings' : 'main'
     store.content.header = headerContent(screen.width)
     draw()
   })
@@ -175,23 +215,19 @@ const start = async () => {
   fromEvent(screen, 'resize')
     .pipe(debounceTime(50))
     .subscribe(() => {
-      if (store.currentMode === 'quotes') {
+      if (store.currentMode === 'main') {
         store.content.header = headerContent(screen.width)
+        store.previous.length >= 2 && appendLine(maxSymbolLength)
         draw()
       }
     })
   of({})
     .pipe(
       switchMap(() => getQuotes(symbols)),
-      retryWhen(errors =>
-        errors.pipe(
-          tap(() => {
-            store.last = { time: Date.now() }
-          }),
-          delay(1000 * 60 * process.env.DELAY)
-        )
-      ),
+      retryWhen(errors => errors.pipe(delay(1000 * 60))),
       tap(quotes => {
+        const { previous } = store
+        const last = previous[previous.length - 1]
         const values = Object.fromEntries(
           Object.entries(
             symbols.reduce((values, symbol) => {
@@ -201,9 +237,9 @@ const start = async () => {
           ).sort((a, b) => b[1] - a[1])
         )
         const changes =
-          !!store.last.values &&
+          !!last &&
           symbols.reduce((changes, symbol) => {
-            changes[symbol] = calculateChange(values[symbol], store.last.values[symbol])
+            changes[symbol] = calculateChange(values[symbol], last.values[symbol])
             return changes
           }, {})
         const maxChangeLength = changes && Math.max(...Object.values(changes).map(change => change[1].length))
@@ -217,11 +253,23 @@ const start = async () => {
         const maxValue = Math.max(...Object.values(values))
         const total = Object.values(values).reduce((total, value) => total + value, 0)
         const totalBTC = Math.round((total * 100000000) / quotes.BTC) / 100000000
-        store.content.display.quotes = `\n\n${Object.keys(values)
+        store.content.display.main = `\n\n${Object.keys(values)
           .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColorMoney(symbol, values[symbol])](formatMoney(values[symbol]).padStart(formatMoney(maxValue).length))} ${getChange(changes[symbol], maxChangeLength, maxToMin)} ${chalk[isWindows ? 'white' : 'gray'](`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
-          .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))}${store.last.total ? ` ${chalk.cyan(calculateChange(total, store.last.total)[1].trim())}` : ''} ${chalk[isWindows ? 'yellow' : 'gray']('-')} ${chalk[getColorTotalBTC(totalBTC)](`${totalBTC} BTC`)}${store.last.totalBTC ? ` ${chalk.cyan(calculateChange(totalBTC, store.last.totalBTC)[1].trim())}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk[isWindows ? 'yellow' : 'gray'](`Like it? Buy me a ${isWindows ? 'beer' : '🍺'} :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC) `)}`
-        store.last = { time: Date.now(), total, totalBTC, values }
+          .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))} ${chalk.green('USD')}${last ? ` ${chalk.cyan(calculateChange(total, last.total)[1].trim())}` : ''} ${chalk[isWindows ? 'yellow' : 'gray']('-')} ${chalk[getColorTotalBTC(totalBTC)](totalBTC)} ${chalk.yellow('BTC')}${last ? ` ${chalk.cyan(calculateChange(totalBTC, last.totalBTC)[1].trim())}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk[isWindows ? 'yellow' : 'gray'](`Like it? Buy me a ${isWindows ? 'beer' : '🍺'} :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC) `)}`
+        store.previous.push({ time: Date.now(), total, totalBTC, values })
+        const newest = store.previous.slice(-96)
+        const tempTotal = newest.map(past => past.total)
+        const tempTotalBTC = newest.map(past => past.totalBTC)
+        const minTotal = Math.min(...tempTotal)
+        const minTotalBTC = Math.min(...tempTotalBTC)
+        const maxTotal = Math.max(...tempTotal) - minTotal
+        const maxTotalBTC = Math.max(...tempTotalBTC) - minTotalBTC
+        const x = [...Array(previous.length).keys()]
+        const yTotal = tempTotal.map(value => (value - minTotal) / maxTotal)
+        const yTotalBTC = tempTotalBTC.map(value => (value - minTotalBTC) / maxTotalBTC)
         store.content.header = headerContent(screen.width)
+        store.lineData = { x, yTotal, yTotalBTC }
+        store.previous.length >= 2 && appendLine(maxSymbolLength)
         draw()
       }),
       delay(1000 * 60 * process.env.DELAY),
@@ -232,7 +280,7 @@ const start = async () => {
     .pipe(
       delay(5000),
       tap(() => {
-        if (store.currentMode === 'quotes') {
+        if (store.currentMode === 'main') {
           store.content.header = headerContent(screen.width)
           draw()
         }
