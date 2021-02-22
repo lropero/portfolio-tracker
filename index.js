@@ -61,24 +61,26 @@ const appendHeader = () => {
 }
 
 const appendLine = maxSymbolLength => {
-  const { content, screen } = store
-  const lines = content.display.main.split('\n')
-  const line = contrib.line({
-    height: 13,
-    style: {
-      baseline: 'cyan',
-      bg: 'black',
-      text: 'black'
-    },
-    top: lines.length + 1,
-    wholeNumbersOnly: true,
-    width: Math.max(...lines.map(line => stripAnsi(line).length)) + maxSymbolLength * 2
-  })
-  if (store.line) {
-    screen.remove(store.line)
+  const { content, currentMode, previous, screen } = store
+  if (currentMode === 'main' && previous.length >= 2) {
+    const lines = content.display.main.split('\n')
+    const line = contrib.line({
+      height: 13,
+      style: {
+        baseline: 'cyan',
+        bg: 'black',
+        text: 'black'
+      },
+      top: lines.length + 1,
+      wholeNumbersOnly: true,
+      width: Math.max(...lines.map(line => stripAnsi(line).length)) + maxSymbolLength * 2
+    })
+    if (store.line) {
+      screen.remove(store.line)
+    }
+    screen.append(line)
+    store.line = line
   }
-  screen.append(line)
-  store.line = line
 }
 
 const calculateChange = (current, last) => {
@@ -96,6 +98,8 @@ const draw = () => {
       { style: { line: 'green' }, title: 'USD', x, y: yTotal },
       { style: { line: 'yellow' }, title: 'BTC', x, y: yTotalBTC }
     ])
+  } else if (line) {
+    screen.remove(line)
   }
   screen.render()
 }
@@ -206,6 +210,7 @@ const start = async () => {
   screen.key('s', () => {
     store.currentMode = store.currentMode === 'main' ? 'settings' : 'main'
     store.content.header = headerContent(screen.width)
+    appendLine(maxSymbolLength)
     draw()
   })
   screen.title = title
@@ -217,7 +222,7 @@ const start = async () => {
     .subscribe(() => {
       if (store.currentMode === 'main') {
         store.content.header = headerContent(screen.width)
-        store.previous.length >= 2 && appendLine(maxSymbolLength)
+        appendLine(maxSymbolLength)
         draw()
       }
     })
@@ -257,7 +262,7 @@ const start = async () => {
           .map(symbol => `  ${chalk.yellow(symbol.padStart(maxSymbolLength))} ${getArrow(symbol, values[symbol])} ${getBar(maxValue, total, values[symbol])} ${chalk[getColorMoney(symbol, values[symbol])](formatMoney(values[symbol]).padStart(formatMoney(maxValue).length))} ${getChange(changes[symbol], maxChangeLength, maxToMin)} ${chalk[isWindows ? 'white' : 'gray'](`${chalk.inverse(formatMoney(quotes[symbol]))}\u00B7${portfolio[symbol]}`)}`)
           .join('\n')}\n\n${``.padStart(maxSymbolLength + 5)}${chalk.cyan('TOTAL')} ${chalk[getColorTotal(total)](formatMoney(total))} ${chalk.green('USD')}${last ? ` ${chalk.cyan(calculateChange(total, last.total)[1].trim())}` : ''} ${chalk[isWindows ? 'yellow' : 'gray']('-')} ${chalk[getColorTotalBTC(totalBTC)](totalBTC)} ${chalk.yellow('BTC')}${last ? ` ${chalk.cyan(calculateChange(totalBTC, last.totalBTC)[1].trim())}` : ''}\n${``.padStart(maxSymbolLength + 5)}${chalk[isWindows ? 'yellow' : 'gray'](`Like it? Buy me a ${isWindows ? 'beer' : '🍺'} :) 1B7owVfYhLjWLh9NWivQAKJHBcf8Doq54i (BTC) `)}`
         store.previous.push({ time: Date.now(), total, totalBTC, values })
-        const newest = store.previous.slice(-96)
+        const newest = store.previous.slice(-80)
         const tempTotal = newest.map(past => past.total)
         const tempTotalBTC = newest.map(past => past.totalBTC)
         const minTotal = Math.min(...tempTotal)
@@ -269,7 +274,7 @@ const start = async () => {
         const yTotalBTC = tempTotalBTC.map(value => (value - minTotalBTC) / maxTotalBTC)
         store.content.header = headerContent(screen.width)
         store.lineData = { x, yTotal, yTotalBTC }
-        store.previous.length >= 2 && appendLine(maxSymbolLength)
+        appendLine(maxSymbolLength)
         draw()
       }),
       delay(1000 * 60 * process.env.DELAY),
