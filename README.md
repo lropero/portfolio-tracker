@@ -6,7 +6,7 @@ Crypto portfolio tracker.
 
 ### Requires
 
-- [Node v14.15.5](https://nodejs.org/)
+- [Node v14.16.0](https://nodejs.org/)
 
 ### Download
 
