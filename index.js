@@ -202,7 +202,8 @@ const start = async () => {
     const last = previous[previous.length - 1]
     const future = last && addMinutes(last.time, process.env.DELAY)
     const now = Date.now()
-    return ` ${chalk.green(title)}${`${currentMode === 'main' && last && future.getTime() > now ? `${chalk.cyan(`next refresh ${formatDistance(future, now, { addSuffix: true, includeSeconds: true })}`)}` : ''}  ${chalk.white('s')}${chalk.cyan(currentMode === 'main' ? 'ettings' : 'ave')} ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + (currentMode === 'main' && last ? 24 : 14))}`
+    const showNext = currentMode === 'main' && last && future.getTime() > now
+    return ` ${chalk.green(title)}${`${showNext ? `${chalk.cyan(`next refresh ${formatDistance(future, now, { addSuffix: true, includeSeconds: true })}`)}` : ''}  ${chalk.white('s')}${chalk.cyan(currentMode === 'main' ? 'ettings' : 'ave')} ${chalk.white('q')}${chalk.cyan('uit')}`.padStart(screenWidth + (showNext ? 24 : 14))}`
   }
   appendDisplay()
   appendHeader()
