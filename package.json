@@ -17,7 +17,7 @@
     "dotenv": "^8.2.0",
     "figures": "^3.2.0",
     "jsonfile": "^6.1.0",
-    "rxjs": "^6.6.3",
+    "rxjs": "^6.6.6",
     "strip-ansi": "^6.0.0"
   },
   "author": "Luciano Ropero <lropero@gmail.com>",
