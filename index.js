@@ -221,11 +221,8 @@ const start = async () => {
   fromEvent(screen, 'resize')
     .pipe(debounceTime(50))
     .subscribe(() => {
-      if (store.currentMode === 'main') {
-        store.content.header = headerContent(screen.width)
-        appendLine(maxSymbolLength)
-        draw()
-      }
+      store.content.header = headerContent(screen.width)
+      draw()
     })
   of({})
     .pipe(
