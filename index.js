@@ -270,7 +270,7 @@ const start = async () => {
         const minTotalBTC = Math.min(...tempTotalBTC)
         const maxTotal = Math.max(...tempTotal) - minTotal
         const maxTotalBTC = Math.max(...tempTotalBTC) - minTotalBTC
-        const x = [...Array(previous.length).keys()]
+        const x = [...Array(newest.length).keys()]
         const yTotal = tempTotal.map(value => (value - minTotal) / maxTotal)
         const yTotalBTC = tempTotalBTC.map(value => (value - minTotalBTC) / maxTotalBTC)
         store.content.header = headerContent(screen.width)
