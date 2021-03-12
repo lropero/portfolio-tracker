@@ -13,7 +13,7 @@
     "blessed-contrib": "^4.8.21",
     "chalk": "^4.1.0",
     "coinmarketcap-api": "^3.1.1",
-    "date-fns": "^2.18.0",
+    "date-fns": "^2.19.0",
     "dotenv": "^8.2.0",
     "figures": "^3.2.0",
     "jsonfile": "^6.1.0",
