@@ -7,6 +7,7 @@ Crypto portfolio tracker.
 ### Requires
 
 - [Node v14.16.0](https://nodejs.org/)
+- npm v7.8.0
 
 ### Download
 
