@@ -1,4 +1,4 @@
-# Portfolio tracker 📈 &middot; [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) ![GitHub package.json version](https://img.shields.io/github/package-json/v/lropero/portfolio-tracker)
+# Portfolio tracker 💼 &middot; [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) ![GitHub package.json version](https://img.shields.io/github/package-json/v/lropero/portfolio-tracker)
 
 Crypto portfolio tracker.
 
@@ -6,8 +6,8 @@ Crypto portfolio tracker.
 
 ### Requires
 
-- [Node v14.16.0](https://nodejs.org/)
-- npm v7.8.0
+- [Node v14.18.1](https://nodejs.org/)
+- npm v8.0.0
 
 ### Download
 

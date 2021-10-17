@@ -15,17 +15,17 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-const blessed = require('blessed')
-const chalk = require('chalk')
-const CoinMarketCap = require('coinmarketcap-api')
-const contrib = require('blessed-contrib')
-const dotenv = require('dotenv')
-const jsonfile = require('jsonfile')
-const stripAnsi = require('strip-ansi')
-const { addMinutes, formatDistance } = require('date-fns')
-const { arrowDown, arrowUp } = require('figures')
-const { debounceTime, delay, repeat, retryWhen, switchMap, tap } = require('rxjs/operators')
-const { fromEvent, of } = require('rxjs')
+import blessed from 'blessed'
+import chalk from 'chalk'
+import CoinMarketCap from 'coinmarketcap-api'
+import contrib from 'blessed-contrib'
+import dotenv from 'dotenv'
+import figures from 'figures'
+import jsonfile from 'jsonfile'
+import stripAnsi from 'strip-ansi'
+import { addMinutes, formatDistance } from 'date-fns'
+import { debounceTime, delay, repeat, retryWhen, switchMap, tap } from 'rxjs/operators'
+import { fromEvent, of } from 'rxjs'
 
 dotenv.config()
 
@@ -114,7 +114,7 @@ const formatMoney = number => {
 const getArrow = (symbol, value) => {
   const { isWindows, previous } = store
   const last = previous[previous.length - 1]
-  return last ? (last.values[symbol] > value ? chalk.red(arrowDown) : last.values[symbol] < value ? chalk.green(arrowUp) : chalk.blue('=')) : chalk[isWindows ? 'white' : 'gray']('\u00B7')
+  return last ? (last.values[symbol] > value ? chalk.red(figures.arrowDown) : last.values[symbol] < value ? chalk.green(figures.arrowUp) : chalk.blue('=')) : chalk[isWindows ? 'white' : 'gray']('\u00B7')
 }
 
 const getBar = (maxValue, total, value) => {

@@ -4,7 +4,7 @@
   "description": "Crypto portfolio tracker.",
   "main": "index.js",
   "scripts": {
-    "clean": "npx rimraf npm-*.log && npx rimraf package-lock.json && npx -p rimraf rimraf node_modules && npm cache verify",
+    "clean": "npx rimraf npm-*.log && npx rimraf package-lock.json && npx rimraf node_modules && npm cache verify",
     "lint": "npx prettier-standard --lint",
     "nuke": "npm run clean && npm install",
     "start": "node index.js",
@@ -12,17 +12,19 @@
   },
   "dependencies": {
     "blessed": "^0.1.81",
-    "blessed-contrib": "^4.8.21",
-    "chalk": "^4.1.0",
+    "blessed-contrib": "^4.10.1",
+    "chalk": "^4.1.2",
     "coinmarketcap-api": "^3.1.1",
-    "date-fns": "^2.19.0",
-    "dotenv": "^8.2.0",
-    "figures": "^3.2.0",
+    "date-fns": "^2.25.0",
+    "dotenv": "^10.0.0",
+    "figures": "^4.0.0",
     "jsonfile": "^6.1.0",
-    "rxjs": "^6.6.7",
-    "strip-ansi": "^6.0.0"
+    "rxjs": "^7.4.0",
+    "strip-ansi": "^7.0.1"
   },
   "author": "Luciano Ropero <lropero@gmail.com>",
+  "exports": "./index.js",
   "license": "ISC",
-  "private": true
+  "private": true,
+  "type": "module"
 }
